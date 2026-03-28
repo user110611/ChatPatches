@@ -1,0 +1,48 @@
+# Automatically builds the project and runs any configured tests for every push
+# and submitted pull request. This can help catch issues that only occur on
+# certain platforms or Java versions, and provides a first line of defense
+# against bad commits.
+
+name: build
+on:
+  # Prevents redundant builds
+  push:
+    paths-ignore:
+      - 'LICENSE'
+      - 'assets/chatpatches/**' # no asset file will cause a compile-time issue, so don't bother
+      - '**.md'
+      - '.gitignore'
+  pull_request:
+    paths-ignore:
+      - 'LICENSE'
+      - 'assets/chatpatches/**' # no asset file will cause a compile-time issue, so don't bother
+      - '**.md'
+      - '.gitignore'
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest' # Windows was failing for no reason, and Stonecutter slows it down anyway
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '25' # Build everything with 25, even older 17 files
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+        #with:
+          #cache-disabled: true
+
+      - name: Make executable
+        run: chmod +x ./gradlew
+
+      - name: Build jars for all Minecraft versions
+        run: ./gradlew collectAll --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            build/libs/
+            build/devlibs/
